@@ -1,6 +1,6 @@
 ## PU-GCN Pytorch (Work in progress)
 
-The [PU-GCN paper](https://arxiv.org/abs/1912.03264) rewritten in Pytorch using [Pytorch Geometric](https://github.com/pyg-team/pytorch_geometric) and layers provided in the [DeepGCN] repo (https://github.com/lightaime/deep_gcns_torch)
+The [PU-GCN paper](https://arxiv.org/abs/1912.03264) rewritten in Pytorch using [Pytorch Geometric](https://github.com/pyg-team/pytorch_geometric) and layers provided in the [DeepGCN](https://github.com/lightaime/deep_gcns_torch) repo
 
 `gcn_lib` folder is taken from the DeepGCN repository
 
