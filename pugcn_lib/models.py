@@ -3,26 +3,51 @@ from torch.nn import Sequential, Linear, ReLU
 from .feature_extractor import InceptionFeatureExtractor
 from .upsample import NodeShuffle
 
+from torch.nn import Sequential, Linear, ReLU
+
 
 class PUGCN(torch.nn.Module):
-    def __init__(self, opts):
+    def __init__(
+        self, channels: int, k: int, r: int, n_idgcn_blocks: int, n_dgcn_blocks: int
+    ):
+        """
+        Args:
+            channels: int
+                number of channels. Used in InceptionFeatureExtractor, NodeShuffle and the reconstructor
+            k: int
+                number of neighbours for constructing the knn graph
+            n_idgcn_blocks: int
+                number of Inception DenseGCN blocks in the feature extractor
+            n_dgcn_blocks: int
+                number of  DenseGCN blocks in each InceptionDenseGCN block in the feature extractor
+        """
+
         super(PUGCN, self).__init__()
 
         # Config
         # Layers
-        self.feature_extractor = InceptionFeatureExtractor(opts)
-        self.upsampler = NodeShuffle(
-            in_channels=opts.channels, k=opts.num_neighbours, r=opts.up_ratio
+        self.feature_extractor = InceptionFeatureExtractor(
+            channels=channels,
+            k=k,
+            n_idgcn_blocks=n_idgcn_blocks,
+            n_dgcn_blocks=n_dgcn_blocks,
         )
+        self.upsampler = NodeShuffle(in_channels=channels, k=k, r=r)
         self.reconstructor = Sequential(
-            Linear(opts.channels, opts.channels),
+            Linear(channels, channels),
             ReLU(),
-            Linear(opts.channels, 3),
+            Linear(channels, 3),
         )
 
-    def forward(self, x):
-        x = self.feature_extractor(x)
-        x = self.upsampler(x)
+    def forward(self, x, batch=None):
+        """
+        x: Tensor
+            Node feature matrix of all point clouds concatenated [N, C]
+        batch: Optional[LongTensor]
+            batch tensor [N, ] as described in PyG docs. For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+        """
+        x = self.feature_extractor(x, batch)
+        x = self.upsampler(x, batch)
         x = self.reconstructor(x)
 
         return x

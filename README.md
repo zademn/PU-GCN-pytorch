@@ -21,6 +21,6 @@ Known bugs / need help (marked are fixed):
 - [x] doesn't learn after an epoch (all predicted points are the same)
 - [x] Find and run a chamfer loss
 - [ ] Understand the bottleneck and global pooling layer
-- [ ] Implement batch training
+- [x] Implement batch training
 - [ ] Reproduce results
 
