@@ -4,7 +4,7 @@ The [PU-GCN paper](https://arxiv.org/abs/1912.03264) rewritten in Pytorch using 
 
 `gcn_lib` folder is taken from the DeepGCN repository
 
-Needed libraries
+Required libraries
 - Pytorch, Pytorch geometric, open3d, h5py, tqdm
 
 ## Relevant repositories
@@ -17,10 +17,7 @@ Needed libraries
 - [Chamfer distance](https://github.com/ThibaultGROUEIX/ChamferDistancePytorch) -- This works
 
 
-Known bugs / need help (marked are fixed):
-- [x] doesn't learn after an epoch (all predicted points are the same)
-- [x] Find and run a chamfer loss
+Known bugs / need help:
 - [ ] Understand the bottleneck and global pooling layer
-- [x] Implement batch training
 - [ ] Reproduce results
 

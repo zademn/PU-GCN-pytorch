@@ -233,3 +233,12 @@ cython_debug/
 everything.ipynb
 
 .vscode/
+
+evaluation/CMake*
+evaluation/Make*
+evaluation/nicolo_sampling_seed.txt
+evaluation/nicolo_point2mesh_distance.xyz
+evaluation/evaluation
+/evaluation/nicolo_density.xyz
+Results/
+train/trained-models/
