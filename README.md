@@ -18,6 +18,5 @@ Required libraries
 
 
 Known bugs / need help:
-- [ ] Understand the bottleneck and global pooling layer
 - [ ] Reproduce results
 
