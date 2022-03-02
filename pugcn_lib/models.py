@@ -2,13 +2,18 @@ import torch
 from torch.nn import Sequential, Linear, ReLU
 from .feature_extractor import InceptionFeatureExtractor
 from .upsample import NodeShuffle
-
 from torch.nn import Sequential, Linear, ReLU
 
 
 class PUGCN(torch.nn.Module):
     def __init__(
-        self, channels: int, k: int, r: int, n_idgcn_blocks: int, n_dgcn_blocks: int
+        self,
+        channels: int,
+        k: int,
+        r: int,
+        n_idgcn_blocks: int,
+        n_dgcn_blocks: int,
+        **idgcn_kwargs
     ):
         """
         Args:
@@ -31,6 +36,7 @@ class PUGCN(torch.nn.Module):
             k=k,
             n_idgcn_blocks=n_idgcn_blocks,
             n_dgcn_blocks=n_dgcn_blocks,
+            **idgcn_kwargs
         )
         self.upsampler = NodeShuffle(in_channels=channels, k=k, r=r)
         self.reconstructor = Sequential(

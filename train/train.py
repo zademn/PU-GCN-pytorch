@@ -116,6 +116,9 @@ if __name__ == "__main__":
         r=model_config.up_ratio,
         n_idgcn_blocks=model_config.n_idgcn_blocks,
         n_dgcn_blocks=model_config.n_dgcn_blocks,
+        use_bottleneck=True,
+        use_pooling=True,
+        use_residual=True,
     ).to(device)
 
     loss_fn = loss_fn = ChamferLoss()

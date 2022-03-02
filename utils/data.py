@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
 import os
-
+from typing import Union
 from .pc_augmentation import (
     nonuniform_sampling,
     jitter_perturbation_point_cloud,
@@ -13,6 +13,21 @@ from .pc_augmentation import (
     shift_point_cloud_and_gt,
     rotate_point_cloud_and_gt,
 )
+
+
+def normalize_pc(data, gt):
+    data_radius = np.ones(shape=(len(data)))
+    centroid = np.mean(gt[:, :, 0:3], axis=1, keepdims=True)
+    gt[:, :, 0:3] = gt[:, :, 0:3] - centroid
+    furthest_distance = np.amax(
+        np.sqrt(np.sum(gt[:, :, 0:3] ** 2, axis=-1)), axis=1, keepdims=True
+    )
+    gt[:, :, 0:3] = gt[:, :, 0:3] / np.expand_dims(furthest_distance, axis=-1)
+    data[:, :, 0:3] = data[:, :, 0:3] - centroid
+    data[:, :, 0:3] = data[:, :, 0:3] / np.expand_dims(furthest_distance, axis=-1)
+
+    return data, gt, data_radius
+
 
 # ======================== Load and save from file ========================
 
@@ -41,15 +56,8 @@ def load_h5_data(h5_filename, num_point, up_ratio=4, skip_rate=1, use_randominpu
     assert len(input) == len(gt)
 
     print("Normalization the data")
-    data_radius = np.ones(shape=(len(input)))
-    centroid = np.mean(gt[:, :, 0:3], axis=1, keepdims=True)
-    gt[:, :, 0:3] = gt[:, :, 0:3] - centroid
-    furthest_distance = np.amax(
-        np.sqrt(np.sum(gt[:, :, 0:3] ** 2, axis=-1)), axis=1, keepdims=True
-    )
-    gt[:, :, 0:3] = gt[:, :, 0:3] / np.expand_dims(furthest_distance, axis=-1)
-    input[:, :, 0:3] = input[:, :, 0:3] - centroid
-    input[:, :, 0:3] = input[:, :, 0:3] / np.expand_dims(furthest_distance, axis=-1)
+
+    input, gt, data_radius = normalize_pc(input, gt)
 
     input = input[::skip_rate]
     gt = gt[::skip_rate]
@@ -97,12 +105,32 @@ class PairData(Data):
 class PCDDataset(Dataset):
     def __init__(
         self,
+        data: np.ndarray,
+        ground_truth: np.ndarray,
+        data_radius: Union[np.ndarray, None],
+        augment: bool = False,
+    ):
+        """If `data_radius` is given the function assumes normalization (using `normalize_pc` or similar) has been applied.
+        Otherwise, if `data_radius` is None this function will apply normalization"""
+        if data_radius is None:
+            data, ground_truth, data_radius = normalize_pc(data, ground_truth)
+
+        self.data = data
+        self.ground_truth = ground_truth
+        self.data_radius = data_radius
+        self.augment = augment
+        assert len(self.data) == len(self.ground_truth), "invalid data"
+
+    @classmethod
+    def from_h5(
+        cls,
         data_path: str,
         num_point: int,
         up_ratio: int = 4,
         skip_rate: int = 1,
         augment: bool = False,
     ):
+        """Create a PCDDataset from a .h5 file"""
         # f = h5py.File(data_path, 'r')
         data, ground_truth, data_radius = load_h5_data(
             h5_filename=data_path,
@@ -111,11 +139,9 @@ class PCDDataset(Dataset):
             skip_rate=skip_rate,
             use_randominput=False,
         )
-        self.data = data
-        self.ground_truth = ground_truth
-        self.data_radius = data_radius
-        self.augment = augment
-        assert len(self.data) == len(self.ground_truth), "invalid data"
+        assert len(data) == len(ground_truth), "invalid data"
+
+        return cls(data, ground_truth, data_radius, augment)
 
     def __getitem__(self, idx):
         input_data, gt_data, radius_data = (

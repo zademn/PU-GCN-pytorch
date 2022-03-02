@@ -81,3 +81,4 @@ class NodeShuffle(torch.nn.Module):
         x = self.gcn(x, edge_index)  # [N, C] -> [N, r * C]
         x = self.ps(x)  # [N, r * C] -> [r * N, C]
         return x
+

@@ -11,7 +11,7 @@ class ModelConfig:
     dilation: int = 2  # dilation in DenseGCN
     num_neighbours: int = 20  # num neighbours in DenseGCN
     n_idgcn_blocks: int = 2  # number of inception dense blocks
-    channels: int = 32  # number of channels for gcn
+    channels: int = 24  # number of channels for gcn
     n_dgcn_blocks: int = 3  # number of DenseGCNBlocks in the DenseGCN
 
 
