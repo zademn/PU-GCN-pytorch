@@ -12,7 +12,8 @@ from ChamferDistancePytorch.chamfer3D.dist_chamfer_3D import (
 )
 from utils.data import PCDDataset
 from datetime import datetime
-
+from torch_geometric.utils import to_dense_batch
+from utils import model_size
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -28,14 +29,13 @@ def train(model, trainloader, loss_fn, optimizer):
         else:
             p_batch, q_batch = None, None
 
-        # get batch and target dimesnions since chamfer loss will need rehsaping
-        b, nq = p_batch.max().item() + 1, q.shape[0]
-
         # Train step
         optimizer.zero_grad()
-
         pred = model(p, batch=p_batch)
-        d1, d2, _, _ = loss_fn(pred.reshape(b, nq // b, 3), q.reshape(b, nq // b, 3))
+
+        pred, _ = to_dense_batch(pred, q_batch)  # [B, N * r, 3]
+        gt, _ = to_dense_batch(q, q_batch)  # # [B, N * r, 3]
+        d1, d2, _, _ = loss_fn(pred, gt)
         loss = d1.mean() + d2.mean()
         loss.backward()
         optimizer.step()
@@ -57,11 +57,11 @@ def evaluate(model, valloader, loss_fn):
         else:
             p_batch, q_batch = None, None
 
-        # get batch and target dimesnions since chamfer loss will need rehsaping
-        b, nq = p_batch.max().item() + 1, q.shape[0]
-
         pred = model(p, batch=p_batch)
-        d1, d2, _, _ = loss_fn(pred.reshape(b, nq // b, 3), q.reshape(b, nq // b, 3))
+
+        pred = to_dense_batch(pred, q_batch)  # [B, N * r, 3]
+        gt = to_dense_batch(q, q_batch)  # [B, N * r, 3]
+        d1, d2, _, _ = loss_fn(pred, gt)
         loss = d1.mean() + d2.mean()
 
         total_loss += loss.item()
@@ -127,14 +127,25 @@ if __name__ == "__main__":
         lr=train_config.lr,
     )
 
+    history = {}
+    history["train_loss"] = []
+    history["val_loss"] = []
     for epoch in tqdm(range(train_config.epochs)):
-        total_loss = train(pugcn, trainloader, loss_fn, optimizer)
-        print(f"epoch: {epoch} \t train loss: {total_loss}")
+        train_loss = train(pugcn, trainloader, loss_fn, optimizer)
+        # val_loss = evaluate(pugcn, valloader, loss_fn)
+        history["train_loss"].append(train_loss)
+        # history["val_loss"].append(val_loss)
+
+        print(f"{epoch=} \t {train_loss=:.6f}")
 
         torch.save(
             {
                 "model_config": model_config.__dict__,
+                "train_config": train_config.__dict__,
+                "data_config": data_config.__dict__,
+                "history": history,
                 "epoch": epoch,
+                "model_size": model_size(pugcn, unit="KB"),
                 "model_state_dict": pugcn.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
             },
