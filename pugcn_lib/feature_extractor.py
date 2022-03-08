@@ -1,7 +1,8 @@
 import torch
+from typing import Optional, List, Tuple
 from torch_cluster import knn_graph
 from gcn_lib.sparse.torch_vertex import DenseGraphBlock, EdgConv
-from typing import Optional
+from gcn_lib.sparse.torch_edge import DilatedKnnGraph
 from torch_geometric.nn import global_mean_pool, global_max_pool
 from .torch_nn import MLP
 
@@ -15,8 +16,7 @@ class DenseGCN(torch.nn.Module):
             in_channels: int
                 The number of input channels
             growth_rate: int
-                The output channels for each DenseGraphBlock and with how much the in_channels
-                of the next block will grow.
+                The output channels for each DenseGraphBlock and with how much the in_channels of the next block will grow
                 After applying all the DenseGraphBlocks the output will have in_channels + n_blocks * growth_rate
         """
         super(DenseGCN, self).__init__()
@@ -59,6 +59,7 @@ class InceptionDenseGCN(torch.nn.Module):
         n_blocks: int,
         in_channels: int,
         k: int,
+        dilations: Tuple[int],
         use_bottleneck: bool = False,
         use_pooling=False,
         use_residual=False,
@@ -69,25 +70,34 @@ class InceptionDenseGCN(torch.nn.Module):
                 Input channels. It's used to compute growth rate for DenseGCN.
             k: int
                 num neighbours
+            dilations: Tuple[int]
+                a list containing the dilation for each DenseGCN layer.
             n_blocks: int
                 number of blocks each DenseGCN will have
             use_bottleneck: bool
-                Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dense_blocks].
-                Also switches to concatenating instead of pooling the outputs of the DenseGCNs
+                True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / (n_blocks + use_pooling)].
+                     - Also switches to concatenating instead of pooling the outputs of the DenseGCNs
+            use_pooling: bool
+                True - applies a `global_max_pool` and in parallel to the DenseGCN
+            use_residual: bool
+                True - adds the inputs to the result
+
+        Remark:
+            - The if `use_bottleneck` is True then `in_channels % t == 0` where `t = len(dilations) + use_pooling`
 
         """
         super(InceptionDenseGCN, self).__init__()
 
         # Config
         self.k = k
-        self.d = 2  # hardcoded for now
+        self.dilations = dilations  # hardcoded for now
         self.n_blocks = n_blocks
         self.use_bottleneck = use_bottleneck
         self.use_pooling = use_pooling
         self.use_residual = use_residual
         # Layers
 
-        div = 2  # Number of dense_gcn
+        div = len(dilations)  # Number of dense_gcn
         if use_pooling:
             self.pool = global_max_pool
             div += 1
@@ -108,11 +118,18 @@ class InceptionDenseGCN(torch.nn.Module):
             channels_dgcn = in_channels  # Else use the in channels
 
         # in_channels = growth_rate because we apply a reduce at the end and dimensions must match
-        self.dense_gcn1 = DenseGCN(
-            n_blocks=n_blocks, in_channels=channels_dgcn, growth_rate=channels_dgcn
+        self.dense_gcns = torch.nn.ModuleList(
+            [
+                DenseGCN(
+                    n_blocks=n_blocks,
+                    in_channels=channels_dgcn,
+                    growth_rate=channels_dgcn,
+                )
+                for _ in dilations
+            ]
         )
-        self.dense_gcn2 = DenseGCN(
-            n_blocks=n_blocks, in_channels=channels_dgcn, growth_rate=channels_dgcn
+        self.knns = torch.nn.ModuleList(
+            [DilatedKnnGraph(k=k, dilation=d, knn="not matrix") for d in dilations]
         )
 
     def forward(self, x, batch=None):
@@ -127,7 +144,7 @@ class InceptionDenseGCN(torch.nn.Module):
         """
 
         k = self.k
-        d = self.d
+        dilations = self.dilations
         # Construct graph
         # edge_index = knn_graph(x, k * d)  # [N * k * d, 2]
         # Select indexes based on dilation
@@ -139,11 +156,23 @@ class InceptionDenseGCN(torch.nn.Module):
         inputs = x
         if self.use_bottleneck:
             x = self.bottleneck(x)
-        edge_index1 = knn_graph(x, k, batch=batch)  # [N * k, 2]
-        edge_index2 = knn_graph(x, k * d, batch=batch)[:, ::d]  # [N * k, 2]
 
-        h1 = self.dense_gcn1(x, edge_index1)  # [N, C]
-        h2 = self.dense_gcn2(x, edge_index2)  # [N, C]
+        res = None
+        for d, dense_gcn, knn in zip(dilations, self.dense_gcns, self.knns):
+            # edge_index = knn_graph(x, k * d, batch=batch)[:, ::d]  # [N * k, 2]
+            edge_index = knn(x, batch)
+            h = dense_gcn(x, edge_index)
+
+            # If we use the bottleneck concat, else stack and max over.
+            if res is None:
+                res = h
+            else:
+                if self.use_bottleneck:
+                    res = torch.cat([res, h], axis=-1)  # [N, C]
+
+                else:
+                    res = torch.stack([res, h])  # [2, N, C]
+                    res = torch.max(res, axis=0).values  # [N, C]
 
         # global pooling
         if self.use_pooling:
@@ -152,15 +181,7 @@ class InceptionDenseGCN(torch.nn.Module):
                 res_pool = self.pool(x, batch=t)[t]
             else:
                 res_pool = self.pool(x, batch=batch)[batch]
-
-        # If we use the bottleneck concat, else stack and max over.
-        if self.use_bottleneck:
-            res = torch.cat([h1, h2], axis=-1)  # [N, C]
-        else:
-            res = torch.stack([h1, h2])  # [2, N, C]
-            res = torch.max(res, axis=0).values  # [N, C]
-
-        if self.use_pooling:
+            # Add the res_pool to the residual layers
             if self.use_bottleneck:
                 res = torch.cat([res, res_pool], axis=-1)  # [N, C]
             else:
@@ -208,14 +229,12 @@ class PreFeatureExtractor(torch.nn.Module):
         return res
 
 
-from typing import Optional
-
-
 class InceptionFeatureExtractor(torch.nn.Module):
     def __init__(
         self,
         channels: int,
         k: int,
+        dilations: List[int],
         n_idgcn_blocks: int,
         n_dgcn_blocks: int,
         **idgcn_kwargs
@@ -227,16 +246,19 @@ class InceptionFeatureExtractor(torch.nn.Module):
 
         Args:
             channels: int
-                number of channels. Will be used as the output of PreFeatureExtractor and  as the growth rate of InceptionDenseGCN
+                number of channels.
+                Will be used as the output of PreFeatureExtractor and as the growth rate of InceptionDenseGCN
             k: int
                 number of neighbours for constructing the knn graph
+            dilations: List[int]
+                the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
             n_idgcn_blocks: int
                 number of Inception DenseGCN blocks
             n_dgcn_blocks: int
                 number of  DenseGCN blocks in each InceptionDenseGCN block
-
             **idgcn_kwargs: args
-                Key arguments for `InceptionDenseGCN`: use_bottleneck: bool = False, use_pooling = False, use_residual = False
+                Key arguments for `InceptionDenseGCN`:
+                use_bottleneck: bool = False, use_pooling = False, use_residual = False
         """
         super(InceptionFeatureExtractor, self).__init__()
 
@@ -248,7 +270,11 @@ class InceptionFeatureExtractor(torch.nn.Module):
         self.layers = torch.nn.ModuleList(
             [
                 InceptionDenseGCN(
-                    n_blocks=n_dgcn_blocks, k=k, in_channels=channels, **idgcn_kwargs
+                    n_blocks=n_dgcn_blocks,
+                    k=k,
+                    dilations=dilations,
+                    in_channels=channels,
+                    **idgcn_kwargs
                 )
                 for i in range(self.n_idgcn)
             ]
@@ -260,7 +286,8 @@ class InceptionFeatureExtractor(torch.nn.Module):
             x: Tensor
                 Node feature matrix of all point clouds concatenated [N, 3]
             batch: Optional[LongTensor]
-                batch tensor [N, ] as described in PyG docs. For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+                batch tensor [N, ] as described in PyG docs.
+                For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
         """
 
         x = self.pre(x, batch=batch)  # [N, 3] ->  [N, C]

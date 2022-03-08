@@ -3,7 +3,7 @@ import os
 
 sys.path.append("../")
 import torch
-from config import AllConfig, DataConfig, TrainConfig, ModelConfig
+from config import DataConfig, TrainConfig, ModelConfig
 from tqdm import tqdm
 from pugcn_lib import PUGCN
 from torch_geometric.loader import DataLoader as PyGLoader
