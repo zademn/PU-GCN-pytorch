@@ -1,0 +1,29 @@
+#Configuration for creating the model. These will be passed as arguments to PUGCN
+model_config:
+    r: 4  # upsampling ratio
+    k: 20  # num neighbours in DenseGCN
+    dilations: [1, 2]  # dilation in DenseGCN
+    n_idgcn_blocks: 2  # number of inception dense blocks
+    channels:  24  # number of channels for gcn
+    n_dgcn_blocks: 3  # number of DenseGCNBlocks in the DenseGCN
+    use_bottleneck:  True # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks] in InceptionDenseGCN.
+    use_pooling:  True # True - applies a `global_max_pool` and in parallel to the DenseGCN
+    use_residual: True # True - adds the inputs to the result in InceptionDenseGCN
+
+#Configuration for the training step
+train_config: 
+    batch_size: 8
+    epochs:  10
+    optimizer: "adam"
+    lr: 0.001
+    betas: [0.9, 0.999]
+    save_every: 5 # Once in how many epochs to checkpoint the model
+    eval_every: 5
+    augment: True # if the training should be done with augmentation
+
+# Configuration for loading the data
+data_config:
+    path: "../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5" # path to data directory
+    num_point: 256  # number of points per sample
+    skip_rate: 5
+    use_randominput: True

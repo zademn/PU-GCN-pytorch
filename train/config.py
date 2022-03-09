@@ -7,15 +7,15 @@ class ModelConfig:
     """Configuration for creating the model"""
 
     num_point: int = 256  # number of points per sample
-    up_ratio: int = 4  # upsampling ratio
+    r: int = 4  # upsampling ratio
+    k: int = 20  # num neighbours in DenseGCN
     dilations: int = (1, 2)  # dilation in DenseGCN
-    num_neighbours: int = 20  # num neighbours in DenseGCN
     n_idgcn_blocks: int = 2  # number of inception dense blocks
     channels: int = 24  # number of channels for gcn
     n_dgcn_blocks: int = 3  # number of DenseGCNBlocks in the DenseGCN
-    use_bottleneck = True, # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks].
-    use_pooling = True,
-    use_residual = True
+    use_bottleneck: bool = True # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks] in InceptionDenseGCN.
+    use_pooling: bool = True # True - applies a `global_max_pool` and in parallel to the DenseGCN
+    use_residual: bool = True # True - adds the inputs to the result in InceptionDenseGCN
 
 
 @dataclass
