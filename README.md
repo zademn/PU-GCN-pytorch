@@ -4,7 +4,8 @@ The [PU-GCN paper](https://arxiv.org/abs/1912.03264) rewritten in Pytorch using 
 
 ## Instalation
 1. Clone the repository
-```
+```bash
+git clone https://github.com/zademn/PU-GCN-pytorch.git
 ```
 2. Make sure to have [pytorch](https://pytorch.org/) and [pytorch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/) installed.  
 
@@ -67,7 +68,7 @@ Open the `Evaluation.ipynb` notebook and specify the path to the model you want 
 - [PUGAN-pytorch](https://github.com/UncleMEDM/PUGAN-pytorch)
 - [chamferdist](https://github.com/krrish94/chamferdist) -- couldn't make it work
 - [chamfer_distance](https://github.com/otaheri/chamfer_distance) -- couldn't make it work tho)
-- [Chamfer distance](https://github.com/ThibaultGROUEIX/ChamferDistancePytorch) -- Working chamfer distance. [This](https://github.com/otaheri/chamfer_distance) and [this]((https://github.com/krrish94/chamferdist)) didn't work
+- [Chamfer distance](https://github.com/ThibaultGROUEIX/ChamferDistancePytorch) -- Working chamfer distance. [This](https://github.com/otaheri/chamfer_distance) and [this](https://github.com/krrish94/chamferdist) didn't work
 
 Known bugs / need help:
 - [ ] Reproduce results
