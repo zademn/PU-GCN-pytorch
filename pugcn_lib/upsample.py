@@ -22,7 +22,8 @@ class PointSuffle(torch.nn.Module):
             x: Tensor
                 Node feature matrix of all point clouds concatenated [N, r * C]
             batch: Optional[LongTensor]
-                batch tensor [N, ] as described in PyG docs. For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+                batch tensor [N, ] as described in PyG docs.
+                For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
         """
         r = self.r
 
@@ -35,7 +36,7 @@ class PointSuffle(torch.nn.Module):
             x = x.reshape((b, n, 1, c // r, r))  # [B, N_, r*C] -> [B, N_, 1, C, r]
             x = x.permute(0, 1, 4, 3, 2)  # [B, N_, 1, C, r] -> [B, N_, r, C, 1]
             x = x.reshape((b, n_ * r, c))  # [B, N_, r, C, 1] -> [B, r * N, C]
-            x = x.reshape((n, c))  #  [B, r * N_, C] -> [r * N, C]
+            x = x.reshape((n, c))  # [B, r * N_, C] -> [r * N, C]
 
         else:
             x = x.reshape(
@@ -74,7 +75,8 @@ class NodeShuffle(torch.nn.Module):
             x: Tensor
                 Node feature matrix of all point clouds concatenated [N, C]
             batch: Optional[LongTensor]
-                batch tensor [N, ] as described in PyG docs. For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+                batch tensor [N, ] as described in PyG docs.
+                For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
         """
 
         edge_index = knn_graph(x, self.k, batch=batch)

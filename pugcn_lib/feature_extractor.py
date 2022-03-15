@@ -3,12 +3,14 @@ from typing import Optional, List, Tuple
 from torch_cluster import knn_graph
 from gcn_lib.sparse.torch_vertex import DenseGraphBlock, EdgConv
 from gcn_lib.sparse.torch_edge import DilatedKnnGraph
-from torch_geometric.nn import global_mean_pool, global_max_pool
+from torch_geometric.nn import global_mean_pool, global_max_pool, global_add_pool
 from .torch_nn import MLP
 
 
 class DenseGCN(torch.nn.Module):
-    def __init__(self, n_blocks: int, in_channels: int, growth_rate: int):
+    def __init__(
+        self, n_blocks: int, in_channels: int, growth_rate: int, conv="edge", **kwargs
+    ):
         """
         Args:
             n_blocks: int
@@ -16,8 +18,14 @@ class DenseGCN(torch.nn.Module):
             in_channels: int
                 The number of input channels
             growth_rate: int
-                The output channels for each DenseGraphBlock and with how much the in_channels of the next block will grow
+                The output channels for each DenseGraphBlock and
+                with how much the in_channels of the next block will grow
                 After applying all the DenseGraphBlocks the output will have in_channels + n_blocks * growth_rate
+            conv: str = "edge"
+                Convolution type in DenseGraphBlock
+                One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
+            **kwargs: key arguments
+                Key arguments for DenseGraphBlock
         """
         super(DenseGCN, self).__init__()
 
@@ -32,8 +40,9 @@ class DenseGCN(torch.nn.Module):
                 DenseGraphBlock(
                     in_channels=self.in_channels + i * self.growth_rate,
                     out_channels=self.growth_rate,
-                    conv="edge",
+                    conv=conv,
                     heads=1,
+                    **kwargs
                 )
                 for i in range(self.n_blocks)
             ]
@@ -63,6 +72,9 @@ class InceptionDenseGCN(torch.nn.Module):
         use_bottleneck: bool = False,
         use_pooling=False,
         use_residual=False,
+        conv="edge",
+        pool_type="max",
+        **kwargs
     ):
         """The inception GCN is formed from 2 DenseGCNs, one that samples neighbours with d = 1 and one with d = 2
         Args:
@@ -75,12 +87,21 @@ class InceptionDenseGCN(torch.nn.Module):
             n_blocks: int
                 number of blocks each DenseGCN will have
             use_bottleneck: bool
-                True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / (n_blocks + use_pooling)].
-                     - Also switches to concatenating instead of pooling the outputs of the DenseGCNs
+                True - Applies a bottleneck 1 layer MLP with dimensions
+                [in_channels, growth_rate / (n_blocks + use_pooling)].
+                - Also switches to concatenating instead of pooling the outputs of the DenseGCNs
             use_pooling: bool
                 True - applies a `global_max_pool` and in parallel to the DenseGCN
             use_residual: bool
                 True - adds the inputs to the result
+            conv: str = "edge"
+                Convolution type in DenseGraphBlock
+                One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
+            pool_type = "max"
+                global pooling type if `use_pooling == True`.
+                One of ["max", "mean", "add"]
+            **kwargs: key arguments
+                DenseGCN kwargs.
 
         Remark:
             - The if `use_bottleneck` is True then `in_channels % t == 0` where `t = len(dilations) + use_pooling`
@@ -98,9 +119,18 @@ class InceptionDenseGCN(torch.nn.Module):
         # Layers
 
         div = len(dilations)  # Number of dense_gcn
+        # Pool layer
         if use_pooling:
-            self.pool = global_max_pool
+            if pool_type == "max":
+                self.pool = global_max_pool
+            elif pool_type == "mean":
+                self.pool = global_mean_pool
+            elif pool_type == "add":
+                self.pool = global_add_pool
+            else:
+                raise ValueError('`pool_type` must be one of ["max", "mean", "add"]')
             div += 1
+        # MLP bottleneck
         if use_bottleneck:
             # We need to set the input shape of the DenseGCN as the output of MLP
             assert (
@@ -124,6 +154,8 @@ class InceptionDenseGCN(torch.nn.Module):
                     n_blocks=n_blocks,
                     in_channels=channels_dgcn,
                     growth_rate=channels_dgcn,
+                    conv=conv,
+                    **kwargs
                 )
                 for _ in dilations
             ]
@@ -234,7 +266,7 @@ class InceptionFeatureExtractor(torch.nn.Module):
         self,
         channels: int,
         k: int,
-        dilations: List[int],
+        dilations: Tuple[int],
         n_idgcn_blocks: int,
         n_dgcn_blocks: int,
         **idgcn_kwargs
@@ -246,19 +278,19 @@ class InceptionFeatureExtractor(torch.nn.Module):
 
         Args:
             channels: int
-                number of channels.
-                Will be used as the output of PreFeatureExtractor and as the growth rate of InceptionDenseGCN
+                number of channels. Will be used as the output of PreFeatureExtractor
+                and as the growth rate of InceptionDenseGCN
             k: int
                 number of neighbours for constructing the knn graph
-            dilations: List[int]
+            dilations: Tuple[int]
                 the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
             n_idgcn_blocks: int
                 number of Inception DenseGCN blocks
             n_dgcn_blocks: int
                 number of  DenseGCN blocks in each InceptionDenseGCN block
             **idgcn_kwargs: args
-                Key arguments for `InceptionDenseGCN`:
-                use_bottleneck: bool = False, use_pooling = False, use_residual = False
+                Key arguments for `InceptionDenseGCN`: use_bottleneck: bool = False,
+                use_pooling = False, use_residual = False, conv = "edge", pool_type = "max"
         """
         super(InceptionFeatureExtractor, self).__init__()
 
