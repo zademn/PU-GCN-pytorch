@@ -1,0 +1,34 @@
+name: test_1
+model_config:
+  r: 4
+  k: 20
+  dilations:
+  - 1
+  - 2
+  n_idgcn_blocks: 2
+  channels: 24
+  n_dgcn_blocks: 3
+  use_bottleneck: true
+  use_pooling: true
+  use_residual: true
+train_config:
+  batch_size: 8
+  epochs: 10
+  optimizer: adam
+  lr: 0.001
+  betas:
+  - 0.9
+  - 0.999
+  save_every: 5
+  eval_every: 5
+  augment: true
+data_config:
+  path: ../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5
+  num_point: 256
+  skip_rate: 5
+  use_randominput: true
+results:
+  epochs_trained: 10
+  chamfer_loss: 5.985347264195155
+  hausdorff_loss: 127.85640174006602
+  model_size: 35.988

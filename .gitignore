@@ -240,5 +240,5 @@ evaluation/nicolo_sampling_seed.txt
 evaluation/nicolo_point2mesh_distance.xyz
 evaluation/evaluation
 /evaluation/nicolo_density.xyz
-Results/
+
 *trained-models/
