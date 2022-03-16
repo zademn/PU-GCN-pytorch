@@ -18,19 +18,30 @@ class PUGCN(torch.nn.Module):
         **idgcn_kwargs
     ):
         """
-        Args:
-            channels: int
-                number of channels. Used in InceptionFeatureExtractor, NodeShuffle and the reconstructor
-            k: int
-                number of neighbours for constructing the knn graph
-            dilations: Tuple[int]
-                the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
-            n_idgcn_blocks: int
-                number of Inception DenseGCN blocks in the feature extractor
-            n_dgcn_blocks: int
-                number of  DenseGCN blocks in each InceptionDenseGCN block in the feature extractor
-            **idgcn_kwargs: args
-                Key arguments for `InceptionDenseGCN`: use_bottleneck: bool = False, use_pooling = False, use_residual = False
+        Parameters:
+        ----------
+        channels: int
+            number of channels. Used in InceptionFeatureExtractor, NodeShuffle and the reconstructor
+
+        k: int
+            number of neighbours for constructing the knn graph
+
+        dilations: Tuple[int]
+            the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
+
+        n_idgcn_blocks: int
+            number of Inception DenseGCN blocks in the feature extractor
+
+        n_dgcn_blocks: int
+            number of  DenseGCN blocks in each InceptionDenseGCN block in the feature extractor
+
+        **idgcn_kwargs: args
+            Key arguments for `InceptionDenseGCN`:
+            use_bottleneck: bool = False
+            use_pooling = False
+            use_residual = False
+            conv = "edge"
+            pool_type = "max"
         """
 
         super(PUGCN, self).__init__()
@@ -51,10 +62,15 @@ class PUGCN(torch.nn.Module):
 
     def forward(self, x, batch=None):
         """
+        Parameters:
+        ----------
         x: Tensor
             Node feature matrix of all point clouds concatenated [N, C]
+
         batch: Optional[LongTensor]
-            batch tensor [N, ] as described in PyG docs. For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+            batch tensor [N, ] as described in PyG docs.
+            For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+
         """
         x = self.feature_extractor(x, batch)
         x = self.upsampler(x, batch)

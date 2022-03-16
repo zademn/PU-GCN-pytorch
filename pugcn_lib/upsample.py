@@ -4,13 +4,14 @@ from torch_cluster import knn_graph
 
 
 class PointSuffle(torch.nn.Module):
-    def __init__(self, r):
+    def __init__(self, r: int):
         """
         Shuffles [N, r * C] -> [r * N, C]
 
-        Args:
-            r: int
-                scale
+        Parameters:
+        ----------
+        r: int
+            scale
         """
         super(PointSuffle, self).__init__()
         # Config
@@ -18,12 +19,14 @@ class PointSuffle(torch.nn.Module):
 
     def forward(self, x, batch=None):
         """
-        Args:
-            x: Tensor
-                Node feature matrix of all point clouds concatenated [N, r * C]
-            batch: Optional[LongTensor]
-                batch tensor [N, ] as described in PyG docs.
-                For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+        Parameters:
+        ----------
+        x: Tensor
+            Node feature matrix of all point clouds concatenated [N, r * C]
+
+        batch: Optional[LongTensor]
+            batch tensor [N, ] as described in PyG docs.
+            For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
         """
         r = self.r
 
@@ -53,11 +56,16 @@ class NodeShuffle(torch.nn.Module):
         """
         Transforms input: [N, C] -> [r * N, C]
 
-        Args:
-            k: int
-                number of neighbours to sample
-            r: int
-                upsampling ratio
+        Parameters:
+        ----------
+        in_channels: int
+            number of input channels C
+
+        k: int
+            number of neighbours to sample
+
+        r: int
+            upsampling ratio
         """
         super(NodeShuffle, self).__init__()
 
@@ -71,12 +79,14 @@ class NodeShuffle(torch.nn.Module):
 
     def forward(self, x, batch=None):
         """
-        Args:
-            x: Tensor
-                Node feature matrix of all point clouds concatenated [N, C]
-            batch: Optional[LongTensor]
-                batch tensor [N, ] as described in PyG docs.
-                For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
+        Parameters:
+        ----------
+        x: Tensor
+            Node feature matrix of all point clouds concatenated [N, C]
+
+        batch: Optional[LongTensor]
+            batch tensor [N, ] as described in PyG docs.
+            For example if we have 2 graphs with 2 nodes each we will have [0, 0, 1, 1]
         """
 
         edge_index = knn_graph(x, self.k, batch=batch)

@@ -144,9 +144,8 @@ class PCDDataset(Dataset):
         if data_radius is None:
             data, ground_truth, data_radius = normalize_pc(data, ground_truth)
 
-        self.rng = np.random.default_rng(
-            seed
-        )  # behaviour might be changed in the future
+        # behaviour might be changed in the future
+        self.rng = np.random.default_rng(seed)
 
         self.data = data
         self.ground_truth = ground_truth
@@ -162,6 +161,7 @@ class PCDDataset(Dataset):
         up_ratio: int = 4,
         skip_rate: int = 1,
         augment: bool = False,
+        seed: int = None,
     ):
         """Generate a PCDDataset from an h5 file
 
@@ -178,10 +178,11 @@ class PCDDataset(Dataset):
 
         skip_rate : int, default=1
 
-
         augment : bool, default=False
             If the dataset should be augmented
 
+        seed : int, default=None
+            random seed
 
         Returns
         -------
@@ -198,7 +199,7 @@ class PCDDataset(Dataset):
         )
         assert len(data) == len(ground_truth), "invalid data"
 
-        return cls(data, ground_truth, data_radius, augment)
+        return cls(data, ground_truth, data_radius, augment, seed)
 
     def __getitem__(self, idx):
         input_data, gt_data, radius_data = (
