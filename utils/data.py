@@ -66,7 +66,17 @@ def load_h5_data(h5_filename, num_point, up_ratio=4, skip_rate=1, use_randominpu
     return input, gt, data_radius
 
 
-def save_xyz_file(numpy_array, path):
+def save_xyz_file(numpy_array: np.ndarray, path: str):
+    """Save a point cloud into a xyz file
+
+    Parameters
+    ----------
+    numpy_array : nd.array
+        Point cloud to save
+
+    path : str
+        File path
+    """
     num_points = numpy_array.shape[0]
     with open(path, "w") as f:
         for i in range(num_points):
@@ -91,11 +101,12 @@ class PairData(Data):
         """
         PyG Data object that handles a source and a target point cloud
 
-        Args:
-            pos_s: Tensor
-                source points positions [N, 3]
-            pos_t: Tensor
-                target points positions [N, 3]
+        Parameters:
+        ----------
+        pos_s: Tensor
+            source points positions [N, 3]
+        pos_t: Tensor
+            target points positions [N, 3]
         """
         super().__init__()
         self.pos_s = pos_s
@@ -109,11 +120,33 @@ class PCDDataset(Dataset):
         ground_truth: np.ndarray,
         data_radius: Union[np.ndarray, None],
         augment: bool = False,
+        seed: int = None,
     ):
-        """If `data_radius` is given the function assumes normalization (using `normalize_pc` or similar) has been applied.
-        Otherwise, if `data_radius` is None this function will apply normalization"""
+        """Initialize a Point Cloud Dataset
+
+        Parameters
+        ----------
+        data : np.ndarray of shape [n_clouds, n_points, n_dimensions]
+            Point cloud data
+
+        ground_truth : np.ndarray of shape [n_clouds, n_points, n_dimensions]
+            Ground truth data
+
+        data_radius : Union[np.ndarray, None]
+
+        augment : bool, default=False
+            If the data should be augumented
+
+        seed : int, default=None
+            random seed
+
+        """
         if data_radius is None:
             data, ground_truth, data_radius = normalize_pc(data, ground_truth)
+
+        self.rng = np.random.default_rng(
+            seed
+        )  # behaviour might be changed in the future
 
         self.data = data
         self.ground_truth = ground_truth
@@ -130,8 +163,32 @@ class PCDDataset(Dataset):
         skip_rate: int = 1,
         augment: bool = False,
     ):
-        """Create a PCDDataset from a .h5 file"""
-        # f = h5py.File(data_path, 'r')
+        """Generate a PCDDataset from an h5 file
+
+        Parameters
+        ----------
+        data_path : str
+            path to the h5 file
+
+        num_point : int
+            number of points for the input data
+
+        up_ratio : int, default=4
+            upsampling ratio
+
+        skip_rate : int, default=1
+
+
+        augment : bool, default=False
+            If the dataset should be augmented
+
+
+        Returns
+        -------
+        PCDDataset
+            The dataset constructed from the h5 file
+        """
+        f = h5py.File(data_path, "r")
         data, ground_truth, data_radius = load_h5_data(
             h5_filename=data_path,
             num_point=num_point,
@@ -152,12 +209,14 @@ class PCDDataset(Dataset):
 
         if self.augment:
             # for data aug
-            input_data, gt_data = rotate_point_cloud_and_gt(input_data, gt_data)
+            input_data, gt_data = rotate_point_cloud_and_gt(
+                input_data, gt_data, rng=self.rng
+            )
             input_data, gt_data, scale = random_scale_point_cloud_and_gt(
-                input_data, gt_data, scale_low=0.9, scale_high=1.1
+                input_data, gt_data, scale_low=0.9, scale_high=1.1, rng=self.rng
             )
             input_data, gt_data = shift_point_cloud_and_gt(
-                input_data, gt_data, shift_range=0.1
+                input_data, gt_data, shift_range=0.1, rng=self.rng
             )
             radius_data = radius_data * scale
 

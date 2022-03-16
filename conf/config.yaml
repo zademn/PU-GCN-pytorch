@@ -1,16 +1,17 @@
 #Configuration for creating the model. These will be passed as arguments to PUGCN
+name: conv_gat
 model_config:
     r: 4  # upsampling ratio
     k: 20  # num neighbours in DenseGCN
     dilations: [1, 2]  # dilation in DenseGCN
-    n_idgcn_blocks: 2  # number of inception dense blocks
-    channels:  36  # number of channels for gcn
-    n_dgcn_blocks: 3  # number of DenseGCNBlocks in the DenseGCN
+    n_idgcn_blocks: 1  # number of inception dense blocks
+    channels:  24  # number of channels for gcn
+    n_dgcn_blocks: 2  # number of DenseGCNBlocks in the DenseGCN
     use_bottleneck:  True # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks] in InceptionDenseGCN.
     use_pooling:  True # True - applies a `global_max_pool` and in parallel to the DenseGCN
     use_residual: True # True - adds the inputs to the result in InceptionDenseGCN
     conv: "edge" # Convoltuion type in DenseGraphBlock One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
-    pool: "max" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
+    pool_type: "max" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
 
 #Configuration for the training step
 train_config: 
@@ -29,3 +30,4 @@ data_config:
     num_point: 256  # number of points per sample
     skip_rate: 1
     use_randominput: True
+    rng_seed: 42

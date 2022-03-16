@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def viz_pcd_graph(points, edge_list):
+def viz_pcd_graph(points: np.array, edge_list: np.array):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     ls = o3d.geometry.LineSet.create_from_point_cloud_correspondences(
@@ -13,7 +13,14 @@ def viz_pcd_graph(points, edge_list):
     o3d.visualization.draw_geometries([pcd, ls])
 
 
-def viz_many(clouds: list, as_plot=False):
+def viz_many(clouds: list[np.ndarray]):
+    """Visualise a list of point clouds using Open3D
+
+    Parameters
+    ----------
+    clouds : list[np.ndarray]
+        The list of point clouds
+    """
     pcds = []
     for i, p in enumerate(clouds):
         pcd = o3d.geometry.PointCloud()
@@ -25,11 +32,24 @@ def viz_many(clouds: list, as_plot=False):
 
 
 def viz_many_mpl(clouds: list[np.ndarray], d=3, ax=None):
+    """Visualize a list of point clouds using matplotlib
+
+    Parameters
+    ----------
+    clouds : list[np.ndarray]
+        The list of point clouds
+
+
+    d : int, default=3
+        distance between point clouds
+
+    ax : _type_, default=None
+        matplotlib ax to plot on
+    """
 
     assert len(clouds) > 0
     points = None
     for i, p in enumerate(clouds):
-
         points = (
             p
             if points is None

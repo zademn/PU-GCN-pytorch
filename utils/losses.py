@@ -1,14 +1,27 @@
 from hausdorff import hausdorff_distance
 from torch_geometric.utils import to_dense_batch
+from torch import Tensor, LongTensor
 
 
-def hausdorff_loss(p, q, batches=None):
-    """
-    Using https://github.com/mavillan/py-hausdorff
-    Args:
-        p: [N, C]
-        q: [N, C]
-        batches: None or Tuple of batch array for p and q
+def hausdorff_loss(p: Tensor, q: Tensor, batches: LongTensor = None):
+    """Compute hausdorff loss between 2 point clouds or
+    batches of point clouds
+
+    Parameters
+    ----------
+    p : Tensor of shape [N, C]
+        First point cloud
+
+    q : Tensor of shape [N, C]
+        Second point cloud
+
+    batches : LongTensor, default=None
+        Tensor that signals for each point the batch number
+
+    Returns
+    -------
+    float
+        The hausdorff loss
     """
     if batches is None:
         return hausdorff_distance(p.cpu().numpy(), q.cpu().numpy())

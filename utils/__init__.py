@@ -1,6 +1,25 @@
 def model_size(model, unit="MB"):
-    """Computes the model's size"""
-    # From here: https://discuss.pytorch.org/t/finding-model-size/130275
+    """Computes the model's size
+    Taken from here: https://discuss.pytorch.org/t/finding-model-size/130275
+
+    Parameters
+    ----------
+    model : pytorch model
+        pytorch model
+
+    unit : str, default="MB"
+        The unit
+
+    Returns
+    -------
+    float
+        The size in `unit`
+
+    Raises
+    ------
+    ValueError
+        If the unit given is not in ["MB, "KB", "B"]
+    """
 
     param_size = 0
     for param in model.parameters():
