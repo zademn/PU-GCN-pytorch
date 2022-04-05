@@ -49,7 +49,7 @@ Open the `Evaluation.ipynb` notebook and specify the path to the model you want 
     - models.py # PUGCN model implementation
     - torch_nn.py # Extra torch layers / modules
     - upsample.py # Upsample layers (NodeShuffle, PointShuffle)
-- train # Contains training configurations
+- conf # Contains training configurations
     - config*.yaml
 - utils
     - data.py # DataLoaders and Data classes
@@ -58,6 +58,7 @@ Open the `Evaluation.ipynb` notebook and specify the path to the model you want 
 - evaluation # code taken from https://github.com/yulequan/PU-Net.
 - Training.ipynb # Training  notebook. Run this to train a model with a config from train/
 - Evaluation.ipynb # Evaluation notebook. Run this to evaluate a trained model
+- results # Contains results of different models / configurations
 ```
 
 
