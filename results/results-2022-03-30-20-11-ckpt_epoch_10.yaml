@@ -1,0 +1,32 @@
+name: pugnn-radius-0.25
+model_config:
+  r: 4
+  k: 20
+  extractor_channels:
+  - 24
+  reconstructor_channels:
+  - 24
+  - 24
+  radius: 0.25
+train_config:
+  batch_size: 8
+  epochs: 10
+  optimizer: adam
+  lr: 0.001
+  betas:
+  - 0.9
+  - 0.999
+  save_every: 5
+  eval_every: 5
+  augment: true
+data_config:
+  path: ../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5
+  num_point: 256
+  skip_rate: 1
+  use_randominput: true
+  rng_seed: 42
+results:
+  epochs_trained: 10
+  chamfer_loss: 1.7807487708674083
+  hausdorff_loss: 79.25594824029704
+  model_size: 22.051
