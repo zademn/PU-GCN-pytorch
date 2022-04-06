@@ -26,6 +26,7 @@ class PUGCN(torch.nn.Module):
         r: int,
         n_idgcn_blocks: int,
         n_dgcn_blocks: int,
+        use_refiner: Tuple[bool, torch.nn.Module] = False,
         **idgcn_kwargs,
     ):
         """
@@ -46,6 +47,10 @@ class PUGCN(torch.nn.Module):
         n_dgcn_blocks: int
             number of  DenseGCN blocks in each InceptionDenseGCN block in the feature extractor
 
+        use_refiner: bool | torch.nn.Module
+          True - Add a RefinerTransfromer
+          torch.nn.Module - add your own refiner
+
         **idgcn_kwargs: args
             Key arguments for `InceptionDenseGCN`:
             use_bottleneck: bool, default = False
@@ -59,6 +64,8 @@ class PUGCN(torch.nn.Module):
         super(PUGCN, self).__init__()
 
         # Config
+        self.r = r
+        self.k = k
         # Layers
         self.feature_extractor = InceptionFeatureExtractor(
             channels=channels,
@@ -68,9 +75,21 @@ class PUGCN(torch.nn.Module):
             n_dgcn_blocks=n_dgcn_blocks,
             **idgcn_kwargs,
         )
-        self.upsampler = NodeShuffle(in_channels=channels, k=k, r=r)
+        self.upsampler = NodeShuffle(
+            in_channels=channels, out_channels=channels, k=k, r=r
+        )
 
         self.reconstructor = MLP([channels, channels, 3])
+
+        # Init refiner
+        if isinstance(use_refiner, torch.nn.Module):
+            self.refiner = use_refiner
+        elif use_refiner is True:
+            self.refiner = RefinerTransformer(
+                in_channels=channels, out_channels=3, k=k, dilation=1
+            )
+        else:
+            self.refiner = None
 
     def forward(self, x, batch=None):
         """
@@ -86,7 +105,19 @@ class PUGCN(torch.nn.Module):
         """
         x = self.feature_extractor(x, batch=batch)
         x = self.upsampler(x, batch=batch)
-        x = self.reconstructor(x)
+        q = self.reconstructor(x)
+
+        if self.refiner is not None:
+            # Compute batch here or take the batch from the upsampler.
+            if batch is not None:
+                batch_ = batch.repeat_interleave(self.r)
+            else:
+                batch_ = None
+            res = self.refiner(x, pos=q, batch=batch_)
+        else:
+            res = q
+
+        return res
 
         return x
 
@@ -122,7 +153,7 @@ class PUInceptionTransformer(torch.nn.Module):
         n_ipt_blocks: int
             Number of InceptionPointTransformer blocks
 
-        refine: bool | torch.nn.Module
+        use_refiner: bool | torch.nn.Module
           True - Add a RefinerTransfromer
           torch.nn.Module - add your own refiner
 
@@ -154,6 +185,7 @@ class PUInceptionTransformer(torch.nn.Module):
         )
         self.reconstructor = MLP([channels, channels, 3])
 
+        # Init refiner
         if isinstance(use_refiner, torch.nn.Module):
             self.refiner = use_refiner
         elif use_refiner is True:

@@ -1,12 +1,13 @@
-name: pugcn-baseline-36
+name: pugcn-baseline-3dilations
 model_config:
   r: 4
   k: 20
   dilations:
   - 1
   - 2
+  - 4
   n_idgcn_blocks: 1
-  channels: 36
+  channels: 24
   n_dgcn_blocks: 2
   use_bottleneck: true
   use_pooling: true
@@ -14,6 +15,7 @@ model_config:
   conv: edge
   pool_type: max
   dynamic: false
+  use_refiner: false
 train_config:
   batch_size: 8
   epochs: 10
@@ -33,6 +35,7 @@ data_config:
   rng_seed: 42
 results:
   epochs_trained: 10
-  chamfer_loss: 1.1879446455433333
-  hausdorff_loss: 63.75933716170916
-  model_size: 56.926
+  chamfer_loss: 1.6007343741174143
+  hausdorff_loss: 76.7246507140726
+  model_size: 27.652
+  inference_time: 0.013873577117919922

@@ -1,16 +1,18 @@
-name: test_2
+name: pupt-baseline-36
 model_config:
   r: 4
   k: 20
   dilations:
   - 1
   - 2
-  n_idgcn_blocks: 2
-  channels: 24
-  n_dgcn_blocks: 3
+  n_ipt_blocks: 1
+  channels: 36
   use_bottleneck: true
   use_pooling: true
   use_residual: true
+  pool_type: max
+  dynamic: false
+  use_refiner: false
 train_config:
   batch_size: 8
   epochs: 10
@@ -25,10 +27,12 @@ train_config:
 data_config:
   path: ../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5
   num_point: 256
-  skip_rate: 5
+  skip_rate: 1
   use_randominput: true
+  rng_seed: 42
 results:
   epochs_trained: 10
-  chamfer_loss: 4.293425013237875
-  hausdorff_loss: 156.74002891974882
-  model_size: 35.988
+  chamfer_loss: 1.2077959792919486
+  hausdorff_loss: 63.011296747091826
+  model_size: 58.941
+  inference_time: 0.01641082763671875

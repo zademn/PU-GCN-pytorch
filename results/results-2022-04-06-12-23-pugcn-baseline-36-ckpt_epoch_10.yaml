@@ -1,18 +1,20 @@
-name: pupt-baseline-refined
+name: pugcn-baseline-36
 model_config:
   r: 4
   k: 20
   dilations:
   - 1
   - 2
-  n_ipt_blocks: 1
-  channels: 24
+  n_idgcn_blocks: 1
+  channels: 36
+  n_dgcn_blocks: 2
   use_bottleneck: true
   use_pooling: true
   use_residual: true
+  conv: edge
   pool_type: max
   dynamic: false
-  use_refiner: true
+  use_refiner: false
 train_config:
   batch_size: 8
   epochs: 10
@@ -32,6 +34,7 @@ data_config:
   rng_seed: 42
 results:
   epochs_trained: 10
-  chamfer_loss: 0.9585917382143571
-  hausdorff_loss: 55.11748675355631
-  model_size: 34.625
+  chamfer_loss: 1.1467720131210133
+  hausdorff_loss: 62.211974223450035
+  model_size: 62.129
+  inference_time: 0.016153812408447266

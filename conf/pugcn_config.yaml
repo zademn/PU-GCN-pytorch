@@ -13,6 +13,8 @@ model_config:
     conv: "edge" # Convoltuion type in DenseGraphBlock One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
     pool_type: "max" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
     dynamic: False # if the graph should be compute at the start of every InceptionDenseGCN block. 
+    use_refiner: True # If to use a RefinerTransformer
+
 
 #Configuration for the training step
 train_config: 
