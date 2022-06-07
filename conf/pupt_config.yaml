@@ -9,10 +9,11 @@ model_config:
     use_bottleneck:  True # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks] in InceptionDenseGCN.
     use_pooling:  True # True - applies a `global_max_pool` and in parallel to the DenseGCN
     use_residual: True # True - adds the inputs to the result in InceptionDenseGCN
-    pool_type: "max" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
+    pool_type: "mean" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
     dynamic: False # if the graph should be compute at the start of every InceptionDenseGCN block. 
     use_refiner: True # If to use a RefinerTransformer
-    
+    upsampler: "nodeshuffle"
+
 #Configuration for the training step
 train_config: 
     batch_size: 8
@@ -21,7 +22,6 @@ train_config:
     lr: 0.001
     betas: [0.9, 0.999]
     save_every: 5 # Once in how many epochs to checkpoint the model
-    eval_every: 5
     augment: True # if the training should be done with augmentation
 
 # Configuration for loading the data

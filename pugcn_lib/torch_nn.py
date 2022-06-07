@@ -157,3 +157,5 @@ class MLP(torch.nn.Module):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({str(self.channel_list)[1:-1]})"
+
+

@@ -1,0 +1,39 @@
+name: pupt-baseline-add-points
+model_config:
+  r: 4
+  k: 20
+  dilations:
+  - 1
+  - 2
+  n_ipt_blocks: 1
+  channels: 24
+  use_bottleneck: true
+  use_pooling: true
+  use_residual: true
+  pool_type: max
+  dynamic: false
+  use_refiner: true
+  add_points: true
+train_config:
+  batch_size: 8
+  epochs: 10
+  optimizer: adam
+  lr: 0.001
+  betas:
+  - 0.9
+  - 0.999
+  save_every: 5
+  eval_every: 5
+  augment: true
+data_config:
+  path: ../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5
+  num_point: 256
+  skip_rate: 1
+  use_randominput: true
+  rng_seed: 42
+results:
+  epochs_trained: 10
+  chamfer_loss: 1.1454370306157617
+  hausdorff_loss: 61.607803710876155
+  model_size: 34.625
+  inference_time: 0.030114412307739258
