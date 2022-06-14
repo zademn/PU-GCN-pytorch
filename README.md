@@ -2,7 +2,7 @@
 
 The [PU-GCN paper](https://arxiv.org/abs/1912.03264) rewritten in Pytorch using [Pytorch Geometric](https://github.com/pyg-team/pytorch_geometric) and layers provided in the [DeepGCN](https://github.com/lightaime/deep_gcns_torch) repository.
 
-[Demo colab](https://colab.research.google.com/github/zademn/PU-GCN-pytorch/blob/master/demo/demo.ipynb)
+Demo colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/zademn/pu-gcn-pytorch/blob/master/demo/demo.ipynb)
 
 ## Instalation
 1. Clone the repository
