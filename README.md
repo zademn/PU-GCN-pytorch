@@ -2,6 +2,8 @@
 
 The [PU-GCN paper](https://arxiv.org/abs/1912.03264) rewritten in Pytorch using [Pytorch Geometric](https://github.com/pyg-team/pytorch_geometric) and layers provided in the [DeepGCN](https://github.com/lightaime/deep_gcns_torch) repository.
 
+[Demo colab](https://colab.research.google.com/github/zademn/PU-GCN-pytorch/blob/master/demo/demo.ipynb)
+
 ## Instalation
 1. Clone the repository
 ```bash
@@ -63,8 +65,11 @@ Open the `Evaluation.ipynb` notebook and specify the path to the model you want 
 ```
 
 
+
 ## Relevant repositories
 - [PU-GCN](https://github.com/guochengqian/PU-GCN) -- Original repository. Dataset downloaded from [here](https://drive.google.com/file/d/1oTAx34YNbL6GDwHYL2qqvjmYtTVWcELg/view)
 - [DeepGCN](https://github.com/lightaime/deep_gcns_torch)
 - [PUGAN-pytorch](https://github.com/UncleMEDM/PUGAN-pytorch)
 - [Chamfer distance](https://github.com/ThibaultGROUEIX/ChamferDistancePytorch) -- Working chamfer distance. [This](https://github.com/otaheri/chamfer_distance) and [this](https://github.com/krrish94/chamferdist) didn't work.
+
+
