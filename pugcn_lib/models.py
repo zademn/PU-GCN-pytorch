@@ -18,7 +18,7 @@ from torch_geometric.nn import (
     global_add_pool,
 )
 from torch_geometric.utils import to_dense_batch
-
+from typing import List
 
 # --------------------------------------------------
 # ---------------- PUGCN  --------------------------
@@ -305,7 +305,7 @@ class JustUpsample(torch.nn.Module):
         self,
         channels: int,
         k: int,
-        dilations: list[int],
+        dilations: List[int],
         r: int,
         upsampler: str = "nodeshuffle",
         conv="edge",
@@ -326,7 +326,7 @@ class JustUpsample(torch.nn.Module):
         k: int
             number of neighbours for constructing the knn graph
 
-        dilations: list[int]
+        dilations: List[int]
             the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
 
         r: int
