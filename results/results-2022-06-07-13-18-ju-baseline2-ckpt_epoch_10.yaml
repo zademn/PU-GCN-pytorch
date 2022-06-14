@@ -35,4 +35,4 @@ results:
   density_aware_chamfer_loss: 402.15207847553916
   hausdorff_loss: 53.81209215055658
   model_size: 16.855
-  inference_time: 0.008856773376464844
+  inference_time: 0.009312152862548828

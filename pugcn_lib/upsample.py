@@ -7,6 +7,7 @@ from einops import rearrange, repeat
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.nn import EdgeConv
 
+# from .torch_geometric_nn import ShuffleConv
 
 class PointShuffleOld(torch.nn.Module):
     def __init__(self, r: int):

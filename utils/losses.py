@@ -116,16 +116,16 @@ def chamfer_dist_repulsion(p1, p2, k: int = 4, return_proportion: bool = False):
     edge_index1 = knn_graph(p1_, k=k, batch=batch)
     edge_index2 = knn_graph(p2_, k=k, batch=batch)
 
-    inter_dist1 = torch.abs(p1_[edge_index1[0]] - p1_[edge_index1[1]])
+    inter_dist1 = (p1_[edge_index1[0]] - p1_[edge_index1[1]]) ** 2
     inter_dist1 = reduce(inter_dist1, "(n r) c -> n c", "mean", r=k)
-    inter_dist2 = torch.abs(p2_[edge_index2[0]] - p2_[edge_index2[1]])
+    inter_dist2 = (p2_[edge_index2[0]] - p2_[edge_index2[1]]) ** 2
     inter_dist2 = reduce(inter_dist2, "(n r) c -> n c", "mean", r=k)
 
     loss1 = torch.abs(inter_dist1 - inter_dist2[idxs1_])
     loss2 = torch.abs(inter_dist2 - inter_dist1[idxs2_])
-    loss_rep = (loss1.mean() + loss2.mean()) / 2
-    loss_cd = (dist1.mean() + dist2.mean()) / 2
-    loss = (loss_rep + loss_cd) / 2
+    loss_rep = loss1.mean() + loss2.mean()
+    loss_cd = dist1.mean() + dist2.mean()
+    loss = loss_rep + loss_cd
 
     if return_proportion:
         return loss, loss_rep / loss_cd

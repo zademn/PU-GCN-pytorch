@@ -52,7 +52,10 @@ class PUGCN(torch.nn.Module):
             number of neighbours for constructing the knn graph
 
         dilations: Tuple[int]
-            the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
+            dilations that the DenseGCNs from each InceptionDenseGCN block will have.
+
+        r: int
+            upsampling ratio
 
         n_idgcn_blocks: int
             number of Inception DenseGCN blocks in the feature extractor
@@ -293,7 +296,7 @@ class PUInceptionTransformer(torch.nn.Module):
 
 
 # --------------------------------------------------
-# ---------------- Simple --------------------------
+# ---------------- JustUpsample --------------------
 # --------------------------------------------------
 
 
@@ -311,6 +314,41 @@ class JustUpsample(torch.nn.Module):
         use_bottleneck: bool = True,
         use_refiner: Union[bool, torch.nn.Module] = False,
     ):
+        """
+
+        PUGCN module that uses InceptionDenseGCN as backbone
+
+        Parameters:
+        ----------
+        channels: int
+            number of channels
+
+        k: int
+            number of neighbours for constructing the knn graph
+
+        dilations: list[int]
+            the dilations that the DenseGCNs from each InceptionDenseGCN block will have.
+
+        r: int
+            upsampling ratio
+
+        conv: str, default = "edge"
+
+        upsampler: str, default = "nodeshuffle"
+            The upsampler to use. One of ["nodeshuffle", "duplicate"]
+
+        use_refiner: bool | torch.nn.Module
+          True - Add a RefinerTransfromer
+          False - No refiner used
+          torch.nn.Module - add your own refiner
+
+        use_bottleneck: bool, default = True
+            True - Use a bottleneck MLP layer to reduce the dimensionality of the features
+
+        use_global: bool, default = True
+            True - Use the global layer
+
+        """
         super().__init__()
 
         # Config

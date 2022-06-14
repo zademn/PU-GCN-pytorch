@@ -1,5 +1,5 @@
 #Configuration for creating the model. These will be passed as arguments to PUGCN
-name: pugcn-baseline-alphavar
+name: pugcn-baseline-shuffleconv
 model_config:
     r: 4  # upsampling ratio
     k: 20  # num neighbours in DenseGCN
@@ -13,7 +13,7 @@ model_config:
     conv: "edge" # Convoltuion type in DenseGraphBlock One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
     pool_type: "mean" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
     dynamic: False # if the graph should be compute at the start of every InceptionDenseGCN block. 
-    use_refiner: True # If to use a RefinerTransformer
+    use_refiner: False # If to use a RefinerTransformer
     upsampler: "nodeshuffle"
     hierarchical: False
 
@@ -29,7 +29,7 @@ train_config:
     save_every: 5 # Once in how many epochs to checkpoint the model
     augment: True # if the training should be done with augmentation
     loss_fn: "cd"
-    k_loss: 4 # only for cd_rep loss
+    k_loss: 16 # only for cd_rep loss
 
 
 
