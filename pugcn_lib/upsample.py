@@ -1,13 +1,8 @@
 import torch
-from gcn_lib.sparse import EdgConv
 from torch_cluster import knn_graph
-from gcn_lib.sparse.torch_vertex import DynConv, GraphConv
-from .torch_nn import MLP
-from einops import rearrange, repeat
 from torch_geometric.utils import to_dense_batch
-from torch_geometric.nn import EdgeConv
-
-# from .torch_geometric_nn import ShuffleConv
+from einops import rearrange, repeat
+from pugcn_lib.torch_geometric_nn import GraphConv
 
 class PointShuffleOld(torch.nn.Module):
     def __init__(self, r: int):
@@ -122,8 +117,6 @@ class NodeShuffle(torch.nn.Module):
 
         r: int
             upsampling ratio
-
-
         """
         super(NodeShuffle, self).__init__()
 
@@ -134,14 +127,7 @@ class NodeShuffle(torch.nn.Module):
         # Layers
         self.gcn = GraphConv(
             in_channels=in_channels, out_channels=in_channels * r, conv=conv
-        )  # self.gcn = DynConv(
-        #     kernel_size=k,
-        #     dilation=1,
-        #     in_channels=in_channels,
-        #     out_channels=in_channels * r,
-        #     conv="edge",
-        #     knn="matrix",
-        # )
+        )
         self.ps = PointShuffle(r=r)
         self.lin = torch.nn.Linear(in_features=in_channels, out_features=out_channels)
 

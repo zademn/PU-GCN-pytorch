@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .pc_util import euler2mat
 from typing import List
+from open3d.visualization.draw_plotly import get_plotly_fig
+
 
 def viz_pcd_graph(points: np.array, edge_list: np.array):
     pcd = o3d.geometry.PointCloud()
@@ -14,9 +16,8 @@ def viz_pcd_graph(points: np.array, edge_list: np.array):
     o3d.visualization.draw_geometries([pcd, ls])
 
 
-def viz_many(clouds: List[np.ndarray]):
+def viz_many(clouds: List[np.ndarray], use_plotly=True):
     """Visualise a list of point clouds using Open3D
-
     Parameters
     ----------
     clouds : List[np.ndarray]
@@ -29,7 +30,10 @@ def viz_many(clouds: List[np.ndarray]):
             p + i * np.array([3, 0, 0])
         )  # shift to see them side by side
         pcds.append(pcd)
-    o3d.visualization.draw_geometries(pcds)
+    if use_plotly:
+        return get_plotly_fig(pcds)
+    else:
+        o3d.visualization.draw_geometries(pcds)
 
 
 def viz_many_mpl(clouds: List[np.ndarray], d=3, ax=None):

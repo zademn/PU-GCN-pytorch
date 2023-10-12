@@ -1,23 +1,18 @@
 from typing import Tuple, Union
 import torch
-from torch.nn import Sequential, Linear, ReLU
+
+from pugcn_lib.torch_geometric_nn import GraphConv, get_dilated_k_fast
 from .feature_extractor import (
     InceptionFeatureExtractor,
-    InceptionPointTransformer,
     InceptionPointTransformerExtractor,
 )
+
 from .upsample import GeneralUpsampler, PointShuffle
-from pugcn_lib.torch_nn import MLP
-from gcn_lib.sparse.torch_vertex import DynConv, GraphConv, EdgConv
-from gcn_lib.sparse.torch_edge import DilatedKnnGraph, Dilated
-from torch_geometric.nn import (
-    radius_graph,
-    PointTransformerConv,
-    global_max_pool,
-    global_mean_pool,
-    global_add_pool,
-)
-from torch_geometric.utils import to_dense_batch
+from torch_geometric.nn import knn_graph, MLP
+
+# from gcn_lib.sparse.torch_vertex import DynConv, GraphConv, EdgConv
+# from gcn_lib.sparse.torch_edge import DilatedKnnGraph, Dilated
+
 from typing import List
 
 # --------------------------------------------------
@@ -148,7 +143,6 @@ class PUGCN(torch.nn.Module):
         )
         x = self.upsampler(x, edge_index=edge_index, pos=pos, batch=batch)
         q = self.reconstructor(x)
-
         if self.refiner is not None:
             # Compute batch here or take the batch from the upsampler.
             if batch is not None:
@@ -160,8 +154,6 @@ class PUGCN(torch.nn.Module):
             res = q
 
         return res
-
-        return x
 
     @torch.no_grad()
     def predict_unrefined(self, x, batch=None):
@@ -358,9 +350,8 @@ class JustUpsample(torch.nn.Module):
         self.use_bottleneck = use_bottleneck
         self.k = k
         self.channels = channels
+        self.hierarchical = hierarchical
         # Layers
-        self.knn = DilatedKnnGraph(k=k * max(dilations), dilation=1)
-        self.knn1 = Dilated(k=k, dilation=max(dilations))
         self.pre_gcn = GraphConv(
             in_channels=3,
             out_channels=channels,
@@ -384,9 +375,6 @@ class JustUpsample(torch.nn.Module):
         else:
             channels_upsampler = channels
 
-        self.knns = torch.nn.ModuleList(
-            [Dilated(k=k, dilation=d, hierarchical=hierarchical) for d in dilations]
-        )
         self.upsamplers = torch.nn.ModuleList(
             [
                 GeneralUpsampler(
@@ -430,23 +418,25 @@ class JustUpsample(torch.nn.Module):
         # keep initial positions
         pos = x
         # Compute initial edge_index
-        edge_index = self.knn(x, batch=batch)  # [N * k * d, 2]
+        k_max = self.k * max(self.dilations)
+        # [N * k * d, 2]
+        edge_index = knn_graph(x, k=k_max, batch=batch)
         # Get initial neighbourhood to apply pre feature extraction
-        edge_index_1 = self.knn1(
-            edge_index=edge_index,
-            batch=batch,
-            k_constructed=self.k * max(self.dilations),
-        )  # [N * k, 2]
+        # [N * k, 2]
+        edge_index_1 = get_dilated_k_fast(
+            edge_index=edge_index, k=self.k, d=max(self.dilations), k_constructed=k_max
+        )
         x = self.pre_gcn(x, edge_index=edge_index_1)  # [N, 3] ->  [N, C]
-
         if self.use_bottleneck:
             x = self.bottleneck(x)
         res = torch.zeros((x.shape[0] * self.r, self.channels)).to(x.device)
-        for knn, upsampler in zip(self.knns, self.upsamplers):
-            ei = knn(
-                edge_index=edge_index,
-                batch=batch,
-                k_constructed=self.k * max(self.dilations),
+        for d, upsampler in zip(self.dilations, self.upsamplers):
+            ei = get_dilated_k_fast(
+                edge_index,
+                k=self.k,
+                d=d,
+                k_constructed=k_max,
+                hierarchical=self.hierarchical,
             )
             h = upsampler(x, edge_index=ei, pos=pos, batch=batch)
             res += h
@@ -517,13 +507,8 @@ class Refiner(torch.nn.Module):
         self.add_points = add_points
         self.dilations = dilations
         self.k = k
+        self.hierarchical = hierarchical
         # Layers
-
-        self.knn = DilatedKnnGraph(k=k * max(dilations), dilation=1)
-        self.knns = torch.nn.ModuleList(
-            [Dilated(k=k, dilation=d, hierarchical=hierarchical) for d in dilations]
-        )
-
         self.layers = torch.nn.ModuleList(
             [
                 GraphConv(
@@ -553,10 +538,19 @@ class Refiner(torch.nn.Module):
 
     def forward(self, x, pos, batch=None):
         # Local features
-        edge_index = self.knn(pos, batch=batch)
+        k_max = self.k * max(self.dilations)
+        # [N * k * d, 2]
+        edge_index = knn_graph(x, k=k_max, batch=batch)
+        # Get initial neighbourhood to apply pre feature e
         h = None
-        for knn, layer in zip(self.knns, self.layers):
-            edge_index_ = knn(edge_index, k_constructed=self.k * max(self.dilations))
+        for d, layer in zip(self.dilations, self.layers):
+            edge_index_ = get_dilated_k_fast(
+                edge_index,
+                k=self.k,
+                d=d,
+                k_constructed=k_max,
+                hierarchical=self.hierarchical,
+            )
             h_ = layer(x=x, pos=pos, edge_index=edge_index_)
             if h is None:
                 h = h_

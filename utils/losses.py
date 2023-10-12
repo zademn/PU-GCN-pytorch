@@ -2,9 +2,10 @@ from hausdorff import hausdorff_distance
 from torch_geometric.utils import to_dense_batch
 from torch import Tensor, LongTensor
 import torch
-from ChamferDistancePytorch.chamfer3D.dist_chamfer_3D import (
-    chamfer_3DDist as ChamferLoss,
-)
+
+# from ChamferDistancePytorch.chamfer3D.dist_chamfer_3D import (
+#     chamfer_3DDist as ChamferLoss,
+# )
 from einops import rearrange, reduce
 from torch_geometric.nn import knn_graph
 
@@ -42,19 +43,37 @@ def hausdorff_loss(p: Tensor, q: Tensor, batches: LongTensor = None):
         return loss / b
 
 
-def chamfer_dist(output, gt, return_raw=False):
-    # https://github.com/wutong16/Density_aware_Chamfer_Distance
+def chamfer_distance(p, q, return_raw=False):
+    if len(p.shape) == 2:
+        p = p.unsqueeze(0)
+    if len(q.shape) == 2:
+        q = q.unsqueeze(0)
 
-    # cham_loss = dist_chamfer_3D.chamfer_3DDist()
-    cham_loss = ChamferLoss()
-    dist1, dist2, idx1, idx2 = cham_loss(gt, output)
-    cd_p = (torch.sqrt(dist1).mean(1) + torch.sqrt(dist2).mean(1)) / 2
-    cd_t = dist1.mean(1) + dist2.mean(1)
+    pq_dists = torch.cdist(p, q)
+    pq_dists = torch.clamp(pq_dists, min=1e-8)
 
-    res = [cd_p, cd_t]
+    p_min, p_idx = torch.min(pq_dists, dim=2)
+    q_min, q_idx = torch.min(pq_dists, dim=1)
+    cd_t = p_min.mean(dim=-1) + q_min.mean(dim=-1)
+    cd_p = torch.sqrt(p_min).mean(dim=-1) + torch.sqrt(q_min).mean(dim=-1)
     if return_raw:
-        res.extend([dist1, dist2, idx1, idx2])
-    return res
+        return cd_p, cd_t, p_min, q_min, p_idx, q_idx
+    return cd_p, cd_t
+
+
+# def chamfer_dist(output, gt, return_raw=False):
+#     # https://github.com/wutong16/Density_aware_Chamfer_Distance
+
+#     # cham_loss = dist_chamfer_3D.chamfer_3DDist()
+#     cham_loss = ChamferLoss()
+#     dist1, dist2, idx1, idx2 = cham_loss(gt, output)
+#     cd_p = (torch.sqrt(dist1).mean(1) + torch.sqrt(dist2).mean(1)) / 2
+#     cd_t = dist1.mean(1) + dist2.mean(1)
+
+#     res = [cd_p, cd_t]
+#     if return_raw:
+#         res.extend([dist1, dist2, idx1, idx2])
+#     return res
 
 
 def density_chamfer_dist(
@@ -75,7 +94,7 @@ def density_chamfer_dist(
         frac_12 = n_x / n_gt
         frac_21 = n_gt / n_x
 
-    cd_p, cd_t, dist1, dist2, idx1, idx2 = chamfer_dist(x, gt, return_raw=True)
+    cd_p, cd_t, dist1, dist2, idx1, idx2 = chamfer_distance(x, gt, return_raw=True)
     # dist1 (batch_size, n_gt): a gt point finds its nearest neighbour x' in x;
     # idx1  (batch_size, n_gt): the idx of x' \in [0, n_x-1]
     # dist2 and idx2: vice versa
@@ -102,7 +121,7 @@ def density_chamfer_dist(
 
 
 def chamfer_dist_repulsion(p1, p2, k: int = 4, return_proportion: bool = False):
-    dist1, dist2, idxs1, idxs2 = ChamferLoss()(p1, p2)
+    _, _, dist1, dist2, idxs1, idxs2 = chamfer_distance(p1, p2, return_raw=True)
     b, n, _ = p1.shape
 
     # Rearrange

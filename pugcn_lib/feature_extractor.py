@@ -1,79 +1,15 @@
 import torch
-from typing import Optional, List, Tuple
+from typing import Optional, Tuple
 from torch_cluster import knn_graph
-from gcn_lib.sparse.torch_vertex import DenseGraphBlock, EdgConv, DynConv, GraphConv
-from gcn_lib.sparse.torch_edge import DilatedKnnGraph, Dilated
-from torch_geometric.nn import global_mean_pool, global_max_pool, global_add_pool
-from .torch_nn import MLP
+from torch_geometric.nn import MLP, global_mean_pool, global_max_pool, global_add_pool
+from .torch_geometric_nn import (
+    GraphConv,
+    get_dilated_k_fast,
+    knn_graph_dilated,
+    DenseGCN,
+)
 from torch_geometric.nn import PointTransformerConv, radius_graph
-
-
-class DenseGCN(torch.nn.Module):
-    def __init__(
-        self,
-        n_blocks: int,
-        in_channels: int,
-        out_channels: int,
-        growth_rate: int,
-        conv: str = "edge",
-        **kwargs,
-    ):
-        """
-        Parameters:
-        ----------
-        n_blocks: int
-            The number of DenseGraphBlock blocks the DenseGCN will have
-
-        in_channels: int
-            The number of input channels
-        out_channels: int
-            The number of output channels
-
-        growth_rate: int
-            The output channels for each DenseGraphBlock and
-            with how much the in_channels of the next block will grow
-            After applying all the DenseGraphBlocks the output will have in_channels + n_blocks * growth_rate
-
-        conv: str = "edge"
-            Convolution type in DenseGraphBlock
-            One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
-
-        **kwargs: key arguments
-            Key arguments for DenseGraphBlock
-
-        """
-        super(DenseGCN, self).__init__()
-
-        # Config
-        self.n_blocks = n_blocks
-        self.growth_rate = growth_rate
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-
-        # GCN blocks
-        self.blocks = torch.nn.ModuleList(
-            [
-                DenseGraphBlock(
-                    in_channels=self.in_channels + i * self.growth_rate,
-                    out_channels=self.growth_rate,
-                    conv=conv,
-                    **kwargs,
-                )
-                for i in range(self.n_blocks)
-            ]
-        )
-
-        self.lin_down = torch.nn.Linear(
-            in_features=in_channels + growth_rate * n_blocks, out_features=out_channels
-        )
-
-    def forward(self, x, edge_index, pos=None):
-        # Apply DenseGCN blocks
-        for block in self.blocks:
-            x, _ = block(x, edge_index, pos)
-        # Downscale from in_channels + growth_rate * n_blocks to out_channels
-        res = self.lin_down(x)
-        return res
+from torch import nn
 
 
 # --------------------------------------------------
@@ -81,7 +17,7 @@ class DenseGCN(torch.nn.Module):
 # --------------------------------------------------
 
 
-class InceptionDenseGCN(torch.nn.Module):
+class InceptionDenseGCN(nn.Module):
     def __init__(
         self,
         n_blocks: int,
@@ -185,7 +121,7 @@ class InceptionDenseGCN(torch.nn.Module):
             channels_dgcn = in_channels  # Else use the in channels
 
         # in_channels = growth_rate because we apply a reduce at the end and dimensions must match
-        self.dense_gcns = torch.nn.ModuleList(
+        self.dense_gcns = nn.ModuleList(
             [
                 DenseGCN(
                     n_blocks=n_blocks,
@@ -198,19 +134,8 @@ class InceptionDenseGCN(torch.nn.Module):
                 for _ in dilations
             ]
         )
-        # If we want to compute the graph at the start of each layer.
-        if dynamic:
-            # knn = "matrix" is better than knn = "not matrix"
-            self.knns = torch.nn.ModuleList(
-                [DilatedKnnGraph(k=k, dilation=d, hierarchical=hierarchical) for d in dilations]
-            )
-        else:
-            self.knns = torch.nn.ModuleList(
-                [Dilated(k=k, dilation=d, hierarchical=hierarchical) for d in dilations]
-            )
 
     def forward(self, x, edge_index=None, pos=None, batch=None):
-
         """
         Parameters:
         ----------
@@ -232,11 +157,11 @@ class InceptionDenseGCN(torch.nn.Module):
             x = self.bottleneck(x)
 
         res = None
-        for i, (d, dense_gcn, knn) in enumerate(
-            zip(dilations, self.dense_gcns, self.knns)
+        for i, (d, dense_gcn) in enumerate(
+            zip(dilations, self.dense_gcns)
         ):
             if self.dynamic:
-                edge_index_d = knn(x, batch=batch)  # [N * k, 2]
+                edge_index_d = knn_graph_dilated(x, k=k, d=d, batch=batch)  # [N * k, 2]
             else:
                 if edge_index is None:
                     raise ValueError(
@@ -245,7 +170,7 @@ class InceptionDenseGCN(torch.nn.Module):
                 elif isinstance(edge_index, (tuple, list)):
                     edge_index_d = edge_index[i]
                 else:
-                    edge_index_d = knn(edge_index, batch)  # [N * k, 2]
+                    edge_index_d = get_dilated_k_fast(edge_index, k=k, d=d)
             h = dense_gcn(x, edge_index_d, pos)
 
             # If we use the bottleneck concat, else stack and max over.
@@ -280,7 +205,7 @@ class InceptionDenseGCN(torch.nn.Module):
         return res
 
 
-class InceptionFeatureExtractor(torch.nn.Module):
+class InceptionFeatureExtractor(nn.Module):
     def __init__(
         self,
         channels: int,
@@ -291,7 +216,6 @@ class InceptionFeatureExtractor(torch.nn.Module):
         use_radius_graph: bool = True,
         **idgcn_kwargs,
     ):
-
         """
         Feature extractor that  transforms [N, 3] into [N, C] and then
         applies a few blocks of InceptionDenseGCN to extract features -> [N, C]
@@ -332,16 +256,12 @@ class InceptionFeatureExtractor(torch.nn.Module):
         self.use_radius_graph = use_radius_graph
 
         # Layers
-        self.knn = DilatedKnnGraph(k=k * max(dilations), dilation=1)
-        self.knn1 = Dilated(k=k, dilation=1)
-        self.pre_gcn = DynConv(
+        self.pre_gcn = GraphConv(
             in_channels=3,
             out_channels=channels,
-            kernel_size=k,
-            dilation=1,
             conv="edge",
         )
-        self.layers = torch.nn.ModuleList(
+        self.layers = nn.ModuleList(
             [
                 InceptionDenseGCN(
                     n_blocks=n_dgcn_blocks,
@@ -374,7 +294,6 @@ class InceptionFeatureExtractor(torch.nn.Module):
         return_index: bool, default = False
             True - Return the edge_index of the knn (k neighbours, NOT k * d )
         """
-
         # Compute initial edge_index
         if self.use_radius_graph:
             edge_index = [
@@ -382,15 +301,16 @@ class InceptionFeatureExtractor(torch.nn.Module):
             ]
             edge_index1 = edge_index[0]
         else:
-            edge_index = self.knn(x, batch=batch)  # [2, N * k * d]
-            # Get d=1 neighbourhood to apply pre feature extraction
-            edge_index1 = self.knn1(
-                edge_index=edge_index,
-                batch=batch,
-                k_constructed=self.k * max(self.dilations),
-            )  # [2, N * k]
-        x = self.pre_gcn(x, edge_index=edge_index, batch=batch)  # [N, 3] ->  [N, C]
-
+            k_max = self.k * max(self.dilations)
+            # [2, N * k * d]
+            edge_index_max = knn_graph(x, k=k_max, batch=batch)
+            # [2, N * k]
+            edge_index = tuple(
+                get_dilated_k_fast(edge_index_max, k=self.k, d=di, k_constructed=k_max)
+                for di in self.dilations
+            )
+            edge_index1 = get_dilated_k_fast(edge_index_max, k=k_max, d=1)  # [2, N * k]
+        x = self.pre_gcn(x, edge_index=edge_index_max)  # [N, 3] ->  [N, C]
         # Apply the InceptionDenseGCNs
         res = torch.zeros_like(x)  # [N, C]
         for layer in self.layers:
@@ -399,7 +319,6 @@ class InceptionFeatureExtractor(torch.nn.Module):
             )  # if dynamic=True edge_index will be ignored
             res = res + x  # add residuals
         res = res / self.n_idgcn  # [N, C]
-
         if return_index:
             return res, edge_index1
         return res
@@ -410,7 +329,7 @@ class InceptionFeatureExtractor(torch.nn.Module):
 # --------------------------------------------------
 
 
-class InceptionPointTransformer(torch.nn.Module):
+class InceptionPointTransformer(nn.Module):
     def __init__(
         self,
         in_channels: int,
@@ -508,7 +427,7 @@ class InceptionPointTransformer(torch.nn.Module):
         else:
             channels_ = in_channels  # Else use the in channels
 
-        self.transformers = torch.nn.ModuleList(
+        self.transformers = nn.ModuleList(
             [
                 PointTransformerConv(
                     in_channels=channels_,
@@ -519,19 +438,7 @@ class InceptionPointTransformer(torch.nn.Module):
             ]
         )
 
-        # IF we want to compute the graph at the start of each layer.
-        if dynamic:
-            # knn = "matrix" is better than knn = "not matrix"
-            self.knns = torch.nn.ModuleList(
-                [DilatedKnnGraph(k=k, dilation=d, hierarchical=hierarchical) for d in dilations]
-            )
-        else:
-            self.knns = torch.nn.ModuleList(
-                [Dilated(k=k, dilation=d, hierarchical=hierarchical) for d in dilations]
-            )
-
     def forward(self, x, pos, edge_index=None, batch=None):
-
         """
         Parameters:
         ----------
@@ -556,15 +463,15 @@ class InceptionPointTransformer(torch.nn.Module):
             x = self.bottleneck(x)
 
         res = None
-        for d, point_transformer, knn in zip(dilations, self.transformers, self.knns):
+        for d, point_transformer in zip(dilations, self.transformers):
             if self.dynamic:
-                edge_index_d = knn(x, batch=batch)  # [N * k, 2]
+                edge_index_d = knn_graph_dilated(x, k=k, d=d, batch=batch)  # [N * k, 2]
             else:
                 if edge_index is None:
                     raise ValueError(
                         "edge_index is required if the graphs is not dynamically computed"
                     )
-                edge_index_d = knn(edge_index, batch)  # [N * k, 2]
+                edge_index_d = get_dilated_k_fast(edge_index, k=k, d=d)  # [N * k, 2]
             h = point_transformer(x, pos=pos, edge_index=edge_index_d)
 
             # If we use the bottleneck concat, else stack and max over.
@@ -599,7 +506,7 @@ class InceptionPointTransformer(torch.nn.Module):
         return res
 
 
-class InceptionPointTransformerExtractor(torch.nn.Module):
+class InceptionPointTransformerExtractor(nn.Module):
     def __init__(
         self,
         channels: int,
@@ -644,14 +551,12 @@ class InceptionPointTransformerExtractor(torch.nn.Module):
         self.n_ipt = n_ipt
 
         # Layers
-        self.knn = DilatedKnnGraph(k=k * max(dilations), dilation=1)
-        self.knn1 = Dilated(k=k, dilation=1)
         self.pre_gcn = GraphConv(
             in_channels=3,
             out_channels=channels,
             conv="edge",
         )
-        self.layers = torch.nn.ModuleList(
+        self.layers = nn.ModuleList(
             [
                 InceptionPointTransformer(
                     in_channels=channels, k=k, dilations=dilations, **ipt_kwargs
@@ -683,11 +588,12 @@ class InceptionPointTransformerExtractor(torch.nn.Module):
         # keep initial positions
         pos = x
         # Compute initial edge_index
-        edge_index = self.knn(x, batch=batch)  # [N * k * d, 2]
+        # [N * k * d, 2]
+        edge_index = knn_graph(x, k=self.k * max(self.dilations), batch=batch)
         # Get d=1 neighbourhood to apply pre feature extraction
-        edge_index_1 = self.knn1(edge_index=edge_index, batch=batch)  # [N * k, 2]
+        # [N * k, 2]
+        edge_index_1 = get_dilated_k_fast(x, k=self.k, d=1, batch=batch)
         x = self.pre_gcn(x, edge_index=edge_index_1, batch=batch)  # [N, 3] ->  [N, C]
-
         # Apply the InceptionDenseGCNs
         res = torch.zeros_like(x)  # [N, C]
         for layer in self.layers:

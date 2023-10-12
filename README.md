@@ -14,22 +14,19 @@ git clone https://github.com/zademn/PU-GCN-pytorch.git
 
 Torch versions used:
 ```bash
-torch==1.10.2+cu113
-torch-cluster==1.5.9
-torch-geometric==2.0.4
-torch-scatter==2.0.9
-torch-sparse==0.6.12
-torch-spline-conv==1.2.1
-torchaudio==0.10.2+cu113
-torchvision==0.11.3+cu113
+torch==2.1.0
+torch-cluster==1.6.3+pt21cu121
+torch-scatter==2.1.2+pt21cu121
+torch-sparse==0.6.18+pt21cu121
+torch-spline-conv==1.2.2+pt21cu121
+torch_geometric==2.4.0
+torchaudio==2.1.0
+torchinfo==1.8.0
+torchvision==0.16.0
 ```
 
 3. Extra libraries are in the `requirements.txt`. `pip freeze` is in  `requirements_all.txt`
 
-4. Chamfer distance is added as a submodule from [this repository](https://github.com/ThibaultGROUEIX/ChamferDistancePytorch)
-```bash
-git submodule add https://github.com/ThibaultGROUEIX/ChamferDistancePytorch
-```
 
 ## How to run?
 ### Training
@@ -45,11 +42,10 @@ Open the `Evaluation.ipynb` notebook and specify the path to the model you want 
 
 ## Repository directory structure
 ```bash
-- gcn_lib # The gcn_lib folder in the DeepGCN repo
 - pugcn_lib
-    - feature_extractor.py # DenseGCN, InceptionDenseGCN and other compounded modules
+    - feature_extractor.py # InceptionDenseGCN and other compounded modules
     - models.py # PUGCN model implementation
-    - torch_nn.py # Extra torch layers / modules
+    - torch_geometric_nn.py # Extra torch layers / modules
     - upsample.py # Upsample layers (NodeShuffle, PointShuffle)
 - conf # Contains training configurations
     - config*.yaml
@@ -63,8 +59,6 @@ Open the `Evaluation.ipynb` notebook and specify the path to the model you want 
 - Evaluation.ipynb # Evaluation notebook. Run this to evaluate a trained model
 - results # Contains results of different models / configurations
 ```
-
-
 
 ## Relevant repositories
 - [PU-GCN](https://github.com/guochengqian/PU-GCN) -- Original repository. Dataset downloaded from [here](https://drive.google.com/file/d/1oTAx34YNbL6GDwHYL2qqvjmYtTVWcELg/view)

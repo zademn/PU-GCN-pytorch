@@ -1,7 +1,6 @@
-numpy==1.21.5
-open3d==0.14.1
-numba==0.55.1
-scikit-learn==1.0.2
+numpy
+open3d
+scikit-learn
 omegaconf
 tqdm
 hausdorff

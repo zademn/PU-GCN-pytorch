@@ -1,18 +1,17 @@
-name: pupt-baseline-no-refiner
+name: ju-baseline36
 model_config:
   r: 4
   k: 20
   dilations:
   - 1
   - 2
-  n_ipt_blocks: 1
-  channels: 24
-  use_bottleneck: true
-  use_pooling: true
-  use_residual: true
-  pool_type: max
-  dynamic: false
+  channels: 36
+  conv: edge
   use_refiner: false
+  upsampler: nodeshuffle
+  hierarchical: false
+  use_bottleneck: true
+  use_global: true
 train_config:
   batch_size: 8
   epochs: 10
@@ -22,8 +21,8 @@ train_config:
   - 0.9
   - 0.999
   save_every: 5
-  eval_every: 5
   augment: true
+  loss_fn: cd
 data_config:
   path: ../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5
   num_point: 256
@@ -32,7 +31,8 @@ data_config:
   rng_seed: 42
 results:
   epochs_trained: 10
-  chamfer_loss: 1.011597974465126
-  hausdorff_loss: 56.99799893465085
-  model_size: 26.543
-  inference_time: 0.012332916259765625
+  chamfer_loss: 0.9240890477507148
+  density_aware_chamfer_loss: 403.05952446197904
+  hausdorff_loss: 53.77569908936678
+  model_size: 35.59
+  inference_time: 0.01335453987121582

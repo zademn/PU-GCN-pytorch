@@ -1,10 +1,10 @@
 #Configuration for creating the model. These will be passed as arguments to PUGCN
 name: ju-baseline2
 model_config:
-    r: 4  # upsampling ratio
-    k: 20  # num neighbours in DenseGCN
-    dilations: [1, 2]  # dilation in DenseGCN
-    channels:  24  # number of channels for gcn
+    r: 4 # upsampling ratio
+    k: 20 # num neighbours in DenseGCN
+    dilations: [1, 2] # dilation in DenseGCN
+    channels: 24 # number of channels for gcn
     conv: "edge" # Convoltuion type in DenseGraphBlock One of ["edge", "mr", "gat", "gcn", "gin", "sage", "rsage"]
     use_refiner: False # If to use a RefinerTransformer
     upsampler: "nodeshuffle"
@@ -12,11 +12,10 @@ model_config:
     use_bottleneck: True
     use_global: True
 
-
 #Configuration for the training step
-train_config: 
+train_config:
     batch_size: 8
-    epochs:  10
+    epochs: 10
     optimizer: "adam"
     lr: 0.001
     betas: [0.9, 0.999]
@@ -24,11 +23,10 @@ train_config:
     augment: True # if the training should be done with augmentation
     loss_fn: "cd"
 
-
 # Configuration for loading the data
 data_config:
     path: "../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5" # path to data directory
-    num_point: 256  # number of points per sample
+    num_point: 256 # number of points per sample
     skip_rate: 1
     use_randominput: True
     rng_seed: 42

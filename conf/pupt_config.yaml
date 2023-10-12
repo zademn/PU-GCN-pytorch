@@ -1,23 +1,23 @@
 #Configuration for creating the model. These will be passed as arguments to PUGCN
 name: pupt-baseline
 model_config:
-    r: 4  # upsampling ratio
-    k: 20  # num neighbours in DenseGCN
-    dilations: [1, 2]  # dilation in DenseGCN
-    n_ipt_blocks: 1  # number of inception point transformer blocks
-    channels:  24  # number of channels for gcn
-    use_bottleneck:  True # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks] in InceptionDenseGCN.
-    use_pooling:  True # True - applies a `global_max_pool` and in parallel to the DenseGCN
+    r: 4 # upsampling ratio
+    k: 20 # num neighbours in DenseGCN
+    dilations: [1, 2] # dilation in DenseGCN
+    n_ipt_blocks: 1 # number of inception point transformer blocks
+    channels: 24 # number of channels for gcn
+    use_bottleneck: True # True - Applies a bottleneck 1 layer MLP with dimensions [in_channels, growth_rate / n_dgcn_blocks] in InceptionDenseGCN.
+    use_pooling: True # True - applies a `global_max_pool` and in parallel to the DenseGCN
     use_residual: True # True - adds the inputs to the result in InceptionDenseGCN
     pool_type: "mean" #  global pooling type if `use_pooling == True`. One of ["max", "mean", "add"]
-    dynamic: False # if the graph should be compute at the start of every InceptionDenseGCN block. 
+    dynamic: False # if the graph should be compute at the start of every InceptionDenseGCN block.
     use_refiner: True # If to use a RefinerTransformer
     upsampler: "nodeshuffle"
 
 #Configuration for the training step
-train_config: 
+train_config:
     batch_size: 8
-    epochs:  10
+    epochs: 10
     optimizer: "adam"
     lr: 0.001
     betas: [0.9, 0.999]
@@ -27,7 +27,7 @@ train_config:
 # Configuration for loading the data
 data_config:
     path: "../data/PU1K/train/pu1k_poisson_256_poisson_1024_pc_2500_patch50_addpugan.h5" # path to data directory
-    num_point: 256  # number of points per sample
+    num_point: 256 # number of points per sample
     skip_rate: 1
     use_randominput: True
     rng_seed: 42
